@@ -1,0 +1,42 @@
+#!/bin/sh
+# Entware init-скрипт. Копіюється в /opt/etc/init.d/S99deyebot (chmod +x).
+# Entware запускає його автоматично після монтування USB-диска.
+# Ручне керування: /opt/etc/init.d/S99deyebot start|stop|restart|status
+
+DIR=/opt/deyebot
+PY=/opt/bin/python3
+LOG=$DIR/deyebot.log
+PIDFILE=/opt/var/run/deyebot.pid
+
+running() {
+    [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+}
+
+start() {
+    if running; then echo "DeyeBot вже працює"; return; fi
+    # обрізаємо лог, якщо більше ~1 МБ
+    [ -f "$LOG" ] && [ "$(wc -c < "$LOG")" -gt 1000000 ] && tail -n 2000 "$LOG" > "$LOG.old" && mv "$LOG.old" "$LOG"
+    mkdir -p /opt/var/run
+    PYTHONUNBUFFERED=1 nohup "$PY" "$DIR/deyebot.py" -c "$DIR/config.json" >> "$LOG" 2>&1 &
+    echo $! > "$PIDFILE"
+    echo "DeyeBot запущено (PID $(cat "$PIDFILE"))"
+}
+
+stop() {
+    if running; then
+        kill "$(cat "$PIDFILE")"
+        echo "DeyeBot зупинено"
+    else
+        echo "DeyeBot не запущено"
+    fi
+    rm -f "$PIDFILE"
+}
+
+case "$1" in
+    start)   start ;;
+    stop)    stop ;;
+    restart) stop; sleep 2; start ;;
+    status)  if running; then echo "працює (PID $(cat "$PIDFILE"))"; else echo "не працює"; fi ;;
+    check)   running || start ;;
+    *)       echo "Використання: $0 {start|stop|restart|status|check}" ;;
+esac

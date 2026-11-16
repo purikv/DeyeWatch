@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DeyeWatch — сповіщення про відключення світла для інверторів Deye</title>
+<meta name="description" content="Безкоштовна програма для Windows і Linux: миттєві сповіщення про зникнення й появу світла, прогноз батареї, статистика відключень, якість мережі та енергія для гібридних інверторів Deye.">
+<meta property="og:title" content="DeyeWatch — світло під контролем">
+<meta property="og:description" content="Сповіщення про відключення світла та аналітика для гібридних інверторів Deye. Windows і Linux, безкоштовно, з відкритим кодом.">
+<meta property="og:image" content="https://purikv.github.io/DeyeWatch/assets/screenshots/overview-outage.png">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#3E63DD">
+<link rel="icon" href="assets/icon.png">
+<style>
+:root{
+  --bg:#F6F7F9;--surface:#FFFFFF;--surface2:#F0F1F4;--border:#E3E5EA;--text:#1A1C22;--muted:#5E6270;--faint:#9A9EA8;
+  --accent:#3E63DD;--accent-soft:#EEF2FD;--ok:#30A46C;--bad:#E5484D;--pv:#F5A524;--grid:#8E4EC6;--gen:#B5651D;
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 12px 32px -12px rgba(16,24,40,.14);
+  --radius:16px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0E0F12;--surface:#17181C;--surface2:#1F2026;--border:#2A2C33;--text:#EDEEF0;--muted:#A0A4AE;--faint:#6B6F7B;
+  --accent:#7090F0;--accent-soft:#1B2033;--ok:#3DD68C;--bad:#FF6369;--pv:#FFC53D;--grid:#BF7AF0;--gen:#E0975A;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 16px 40px -12px rgba(0,0,0,.6);
+}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 "Segoe UI Variable Text","Segoe UI",Inter,system-ui,-apple-system,"Noto Sans",sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+/* навігація */
+nav{position:sticky;top:0;z-index:10;backdrop-filter:saturate(1.6) blur(14px);background:color-mix(in srgb,var(--bg) 82%,transparent);border-bottom:1px solid var(--border)}
+nav .wrap{display:flex;align-items:center;gap:28px;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:650;font-size:17px;color:var(--text)}
+.brand img{width:30px;height:30px}
+nav .links{display:flex;gap:22px;margin-left:auto;font-size:14.5px}
+nav .links a{color:var(--muted)}
+nav .links a:hover{color:var(--text);text-decoration:none}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:11px;font-weight:600;font-size:15px;border:1px solid var(--border);background:var(--surface);color:var(--text);transition:transform .15s,box-shadow .15s}
+.btn:hover{text-decoration:none;transform:translateY(-1px);box-shadow:var(--shadow)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn svg{width:18px;height:18px}
+nav .btn{padding:8px 14px;font-size:14px}
+/* hero */
+.hero{padding:84px 0 40px;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:13.5px;font-weight:600;margin-bottom:22px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb,var(--ok) 25%,transparent);animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--ok) 0%,transparent)}}
+h1{font-size:clamp(36px,5.4vw,62px);line-height:1.08;letter-spacing:-.025em;margin:0 auto 20px;max-width:860px;font-weight:700}
+h1 em{font-style:normal;background:linear-gradient(90deg,var(--accent),var(--grid));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:clamp(17px,2vw,20px);color:var(--muted);max-width:720px;margin:0 auto 34px}
+.cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.meta{margin-top:16px;color:var(--faint);font-size:13.5px}
+.shot{margin:56px auto 0;max-width:1080px;border-radius:18px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);background:var(--surface)}
+.shot .bar{display:flex;gap:7px;padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.shot .bar i{width:11px;height:11px;border-radius:50%;background:var(--border)}
+/* секції */
+section{padding:88px 0}
+.kicker{color:var(--accent);font-weight:650;font-size:13.5px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+h2{font-size:clamp(28px,3.4vw,40px);line-height:1.15;letter-spacing:-.02em;margin:0 0 14px;font-weight:700}
+.sub{color:var(--muted);font-size:17.5px;max-width:680px;margin:0 0 44px}
+.center{text-align:center}.center .sub{margin-left:auto;margin-right:auto}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:26px}
+.card h3{margin:14px 0 6px;font-size:17.5px;font-weight:650}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center}
+.ic svg{width:22px;height:22px}
+/* показ */
+.feature{display:grid;grid-template-columns:1fr 1.35fr;gap:56px;align-items:center;margin-top:72px}
+.feature.rev{grid-template-columns:1.35fr 1fr}
+.feature.rev .txt{order:2}
+.feature img{border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.feature h3{font-size:26px;letter-spacing:-.015em;margin:0 0 12px}
+.feature p{color:var(--muted);margin:0 0 16px}
+.ticks{list-style:none;padding:0;margin:0}
+.ticks li{padding-left:28px;position:relative;margin:9px 0;font-size:15.5px}
+.ticks li:before{content:"";position:absolute;left:0;top:6px;width:16px;height:16px;border-radius:50%;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 8.2l2.3 2.3 4.7-5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px}
+/* сповіщення */
+.toasts{display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
+.toasts img{width:330px;filter:drop-shadow(0 12px 28px rgba(16,24,40,.16))}
+/* галерея */
+.tabs{display:inline-flex;background:var(--surface2);border-radius:11px;padding:4px;gap:2px;margin-bottom:26px;flex-wrap:wrap;justify-content:center}
+.tabs button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:14.5px;font-weight:550;padding:8px 16px;border-radius:8px;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.gallery img{border-radius:14px;border:1px solid var(--border);box-shadow:var(--shadow);margin:0 auto}
+.gallery figcaption{color:var(--muted);font-size:14.5px;margin-top:14px}
+/* завантаження */
+.dl{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.dl .card{display:flex;flex-direction:column;gap:12px}
+.dl .card.rec{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.dl h3{margin:0;font-size:20px}
+.dl .os{display:flex;align-items:center;gap:12px}
+.dl .os svg{width:30px;height:30px}
+.dl .req{color:var(--muted);font-size:14px;margin:0}
+.dl .btn{justify-content:center;margin-top:auto}
+.tag{font-size:12px;font-weight:650;color:var(--accent);background:var(--accent-soft);padding:3px 9px;border-radius:999px;margin-left:auto}
+code{font-family:"Cascadia Code",ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13.5px;background:var(--surface2);border:1px solid var(--border);padding:2px 7px;border-radius:6px}
+/* кроки */
+.steps{counter-reset:s;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:22px}
+.step{position:relative;padding-top:54px}
+.step:before{counter-increment:s;content:counter(s);position:absolute;top:22px;left:26px;width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:14px;display:grid;place-items:center}
+.step{padding-left:26px;padding-right:26px}
+/* сумісність */
+.compat{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+/* FAQ */
+details{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 22px;margin-bottom:12px}
+summary{cursor:pointer;font-weight:600;font-size:16.5px;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";color:var(--faint);font-size:22px;line-height:1;transition:transform .2s}
+details[open] summary:after{transform:rotate(45deg)}
+details p{color:var(--muted);margin:12px 0 0}
+.faq{max-width:820px;margin:0 auto}
+/* документація */
+.docs{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.docs a{display:block;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px;color:var(--text);transition:border-color .15s,transform .15s}
+.docs a:hover{text-decoration:none;border-color:var(--accent);transform:translateY(-2px)}
+.docs b{display:block;font-size:15.5px;margin-bottom:4px}
+.docs span{color:var(--muted);font-size:14px}
+footer{border-top:1px solid var(--border);padding:36px 0 48px;color:var(--faint);font-size:14px}
+footer .wrap{display:flex;gap:20px;flex-wrap:wrap;justify-content:space-between}
+.alt{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.alt .card,.alt details,.alt .docs a{background:var(--bg)}
+@media (max-width:920px){
+  .grid,.dl,.steps,.compat{grid-template-columns:1fr}
+  .docs{grid-template-columns:1fr 1fr}
+  .feature,.feature.rev{grid-template-columns:1fr;gap:26px;margin-top:56px}
+  .feature.rev .txt{order:0}
+  nav .links{display:none}
+  nav .btn{margin-left:auto}
+  section{padding:64px 0}
+  .hero{padding-top:56px}
+}
+@media (max-width:520px){.wrap{padding:0 16px}.docs{grid-template-columns:1fr}.toasts img{width:100%}}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#"><img src="assets/icon.png" alt="">DeyeWatch</a>
+    <div class="links">
+      <a href="#features">Можливості</a>
+      <a href="#screens">Скріншоти</a>
+      <a href="#download">Завантажити</a>
+      <a href="#faq">Питання</a>
+      <a href="https://github.com/purikv/DeyeWatch">GitHub</a>
+    </div>
+    <a class="btn primary" href="#download">Завантажити</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="pill"><span class="dot"></span>Безкоштовно · відкритий код · Windows і Linux</div>
+    <h1>Світло вдома — <em>під контролем</em></h1>
+    <p class="lead">DeyeWatch стежить за гібридним інвертором Deye і за 10–20 секунд повідомляє, коли зникає чи з'являється світло. Показує, на скільки вистачить батареї, і веде повну статистику відключень, мережі та енергії.</p>
+    <div class="cta">
+      <a class="btn primary" href="#download">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16"/></svg>
+        Завантажити безкоштовно</a>
+      <a class="btn" href="https://github.com/purikv/DeyeWatch">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5z"/></svg>
+        Сирці на GitHub</a>
+    </div>
+    <div class="meta">Без реєстрації, без хмари, без підписок. Дані лишаються на вашому комп'ютері.</div>
+    <div class="shot">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <picture>
+        <source srcset="assets/screenshots/overview-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="assets/screenshots/overview-outage.png" alt="Головний екран DeyeWatch: стан мережі, схема потоків енергії, батарея" width="2560" height="1600">
+      </picture>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="wrap">
+    <div class="center">
+      <div class="kicker">Можливості</div>
+      <h2>Усе, що треба знати про світло й енергію</h2>
+      <p class="sub">Зрозуміло з першого погляду: великий стан, схема потоків, висновки людською мовою й підказка до кожного показника.</p>
+    </div>
+    <div class="grid">
+      <div class="card"><div class="ic" style="background:color-mix(in srgb,var(--bad) 14%,transparent);color:var(--bad)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 2 5 13.4h6.1L10 22l8.9-12h-6.2z"/></svg></div>
+        <h3>Миттєві сповіщення</h3><p>Світло зникло чи з'явилося, низький заряд, напруга поза нормою, генератор, втрата зв'язку — на робочому столі й у Telegram.</p></div>
+      <div class="card"><div class="ic" style="background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="3.5" r="1.6"/><circle cx="3.5" cy="12" r="1.6"/><circle cx="20.5" cy="12" r="1.6"/><circle cx="12" cy="20.5" r="1.6"/><path d="M12 5.2V9M5.2 12H9m6 0h3.8M12 15v3.8"/></svg></div>
+        <h3>Схема потоків енергії</h3><p>Звідки береться електрика — мережа, сонце, генератор, батарея — і куди йде. З потужністю й анімованим напрямком.</p></div>
+      <div class="card"><div class="ic" style="background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2.5"/><path d="M10 2.5h4"/><rect x="9" y="11" width="6" height="7" rx="1" fill="currentColor" stroke="none"/></svg></div>
+        <h3>Прогноз батареї</h3><p>«Вистачить ≈ 7 год 40 хв» при поточному споживанні — до мінімального заряду, на якому інвертор вимикається.</p></div>
+      <div class="card"><div class="ic" style="background:color-mix(in srgb,var(--pv) 18%,transparent);color:var(--pv)"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="5" height="5" rx="1.2"/><rect x="9.5" y="3" width="5" height="5" rx="1.2" opacity=".55"/><rect x="16" y="3" width="5" height="5" rx="1.2" opacity=".3"/><rect x="3" y="9.5" width="5" height="5" rx="1.2" opacity=".4"/><rect x="9.5" y="9.5" width="5" height="5" rx="1.2"/><rect x="16" y="9.5" width="5" height="5" rx="1.2" opacity=".7"/><rect x="3" y="16" width="5" height="5" rx="1.2" opacity=".25"/><rect x="9.5" y="16" width="5" height="5" rx="1.2" opacity=".6"/><rect x="16" y="16" width="5" height="5" rx="1.2"/></svg></div>
+        <h3>Статистика відключень</h3><p>Скільки разів і як довго, години по днях і теплова карта «коли найчастіше вимикають» — видно справжній графік.</p></div>
+      <div class="card"><div class="ic" style="background:color-mix(in srgb,var(--grid) 14%,transparent);color:var(--grid)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12c2.5-6 5-6 7.5 0s5 6 7.5 0 3.5-4 5-2"/></svg></div>
+        <h3>Якість мережі й енергія</h3><p>Напруга й частота з межами норми, сонце, споживання, мережа й генератор по днях, рівень самозабезпечення.</p></div>
+      <div class="card"><div class="ic" style="background:color-mix(in srgb,var(--faint) 18%,transparent);color:var(--muted)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+        <h3>Локально й приватно</h3><p>Дані напряму з WiFi-стіка у вашій мережі. Ні власного сервера, ні телеметрії. Deye Cloud — лише за бажанням.</p></div>
+    </div>
+
+    <div class="feature">
+      <div class="txt">
+        <h3>Коли вимикають — видно одразу</h3>
+        <p>Сторінка відключень сама підсумовує головне: скільки разів і як довго не було світла, і в які дні та години це трапляється найчастіше.</p>
+        <ul class="ticks">
+          <li>Кількість, сумарна, найдовша й середня тривалість</li>
+          <li>Теплова карта «день тижня × година»</li>
+          <li>Повний журнал з точністю до хвилини</li>
+          <li>Час роботи й енергія генератора</li>
+        </ul>
+      </div>
+      <img src="assets/screenshots/outages.png" alt="Статистика відключень" loading="lazy">
+    </div>
+
+    <div class="feature rev">
+      <div class="txt">
+        <h3>Історія навіть тоді, коли комп'ютер спав</h3>
+        <p>Підключіть свій акаунт Deye Cloud — і DeyeWatch сам догрузить пропущене: при запуску, після сну, коли повернувся зв'язок і кожні 30 хвилин.</p>
+        <ul class="ticks">
+          <li>Покрокові підказки, де взяти ключі</li>
+          <li>Пароль не зберігається — лише хеш SHA-256</li>
+          <li>Перенесення налаштувань на інший комп'ютер одним файлом</li>
+        </ul>
+      </div>
+      <img src="assets/screenshots/settings-cloud.png" alt="Налаштування Deye Cloud" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap center">
+    <div class="kicker">Сповіщення</div>
+    <h2>Гарні й зрозумілі — з першого погляду</h2>
+    <p class="sub">Власні картки в куті екрана з головним: що сталося, скільки тривало, скільки заряду й на скільки його вистачить. Те саме — у Telegram, вам і рідним.</p>
+    <div class="toasts">
+      <img src="assets/screenshots/toast-outage.png" alt="Сповіщення «Світло зникло»" loading="lazy">
+      <img src="assets/screenshots/toast-restore.png" alt="Сповіщення «Світло з'явилося»" loading="lazy">
+      <img src="assets/screenshots/toast-generator.png" alt="Сповіщення «Генератор запущено»" loading="lazy">
+    </div>
+  </div>
+</section>
+
+<section id="screens">
+  <div class="wrap center">
+    <div class="kicker">Скріншоти</div>
+    <h2>Подивіться, як це виглядає</h2>
+    <p class="sub">Світла й темна теми підлаштовуються під систему. Дані на знімках — демонстраційні.</p>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-i="0">Огляд</button>
+      <button role="tab" aria-selected="false" data-i="1">Відключення</button>
+      <button role="tab" aria-selected="false" data-i="2">Якість мережі</button>
+      <button role="tab" aria-selected="false" data-i="3">Енергія</button>
+      <button role="tab" aria-selected="false" data-i="4">Батарея</button>
+      <button role="tab" aria-selected="false" data-i="5">Темна тема</button>
+      <button role="tab" aria-selected="false" data-i="6">Налаштування</button>
+    </div>
+    <figure class="gallery">
+      <img id="g-img" src="assets/screenshots/overview.png" alt="Огляд" width="2560" height="1600">
+      <figcaption id="g-cap">Огляд: стан мережі, смуга 24 годин, схема потоків, батарея з прогнозом.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="download" class="alt">
+  <div class="wrap">
+    <div class="center">
+      <div class="kicker">Завантаження</div>
+      <h2>Встановлення за хвилину</h2>
+      <p class="sub">Оберіть свою систему. Програма сама знайде WiFi-стік інвертора у вашій мережі.</p>
+    </div>
+    <div class="dl">
+      <div class="card" data-os="win">
+        <div class="os"><svg viewBox="0 0 24 24" fill="#0078D4"><path d="M3 5.1 10.4 4v7.1H3zM11.4 3.9 21 2.5v8.6h-9.6zM3 12.1h7.4v7.1L3 18.1zM11.4 12.1H21v8.6l-9.6-1.4z"/></svg><h3>Windows</h3><span class="tag">рекомендовано</span></div>
+        <p class="req">Windows 10 / 11, 64-біт. Один файл — без встановлення, Python не потрібен.</p>
+        <p class="req">Якщо SmartScreen попередить: «Докладніше» → «Виконати в будь-якому разі».</p>
+        <a class="btn primary" href="https://github.com/purikv/DeyeWatch/releases/latest/download/DeyeWatch.exe">Завантажити .exe</a>
+      </div>
+      <div class="card" data-os="deb">
+        <div class="os"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#E95420"/><circle cx="12" cy="12" r="4.2" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="6.2" cy="12" r="1.7" fill="#fff"/><circle cx="14.9" cy="7" r="1.7" fill="#fff"/><circle cx="14.9" cy="17" r="1.7" fill="#fff"/></svg><h3>Ubuntu / Debian</h3><span class="tag">рекомендовано</span></div>
+        <p class="req">Ubuntu 22.04+, Debian 11+, Linux Mint 21+ (x86_64). Встановлюється без інтернету:</p>
+        <p class="req"><code>sudo apt install ./deyewatch_amd64.deb</code></p>
+        <a class="btn primary" href="https://github.com/purikv/DeyeWatch/releases/latest/download/deyewatch_amd64.deb">Завантажити .deb</a>
+      </div>
+      <div class="card" data-os="linux">
+        <div class="os"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c-2.6 0-3.6 2.3-3.6 4.6 0 1.6-.6 2.6-1.6 4-1.3 1.9-2.8 4.3-2.3 6.9.3 1.7 2 2.4 3.6 2.6 1.3.2 2.5-.4 3.9-.4s2.6.6 3.9.4c1.6-.2 3.3-.9 3.6-2.6.5-2.6-1-5-2.3-6.9-1-1.4-1.6-2.4-1.6-4 0-2.3-1-4.6-3.6-4.6z"/><circle cx="10.4" cy="7" r=".7" fill="currentColor"/><circle cx="13.6" cy="7" r=".7" fill="currentColor"/></svg><h3>Інші Linux</h3></div>
+        <p class="req">Fedora, Arch, openSUSE, ARM64 (Raspberry Pi 4/5). Потрібні Python 3.9+ і інтернет:</p>
+        <p class="req"><code>tar xzf DeyeWatch-linux.tar.gz</code> → <code>sh install.sh</code></p>
+        <a class="btn" href="https://github.com/purikv/DeyeWatch/releases/latest/download/DeyeWatch-linux.tar.gz">Завантажити архів</a>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="card step"><h3>Запустіть</h3><p>Програма шукає WiFi-стік у мережі й підключається сама. Не знайшла — «Знайти автоматично» або IP і SN стіка вручну.</p></div>
+      <div class="card step"><h3>Пройдіть «З чого почати»</h3><p>Ємність батареї й мінімальний заряд, автозапуск — за підказками на головному екрані.</p></div>
+      <div class="card step"><h3>За бажанням — Telegram і хмара</h3><p>Сповіщення на телефон рідним і догрузка історії з Deye Cloud — покрокові інструкції прямо в налаштуваннях.</p></div>
+    </div>
+    <p class="center" style="margin-top:28px;color:var(--muted)">Детально — у <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/installation.md">посібнику зі встановлення</a>. Усі версії — на сторінці <a href="https://github.com/purikv/DeyeWatch/releases">релізів</a>.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="center">
+      <div class="kicker">Сумісність</div>
+      <h2>Що потрібно</h2>
+      <p class="sub">Жодного додаткового обладнання — лише WiFi-стік, який уже стоїть в інверторі.</p>
+    </div>
+    <div class="compat">
+      <div class="card"><h3>Інвертор</h3><p>Однофазні гібридні Deye серій SUN-…-SG0xLP1 (перевірено на SUN-6K-SG03LP1). Sunsynk і Sol-Ark з тією ж картою регістрів, імовірно, теж працюють.</p></div>
+      <div class="card"><h3>WiFi-стік Solarman</h3><p>Стік, що відповідає в локальній мережі на порту 8899 (протокол Solarman V5). Комп'ютер має бути в тій самій мережі.</p></div>
+      <div class="card"><h3>Генератор (опційно)</h3><p>Підключений до порту GEN інвертора — з'явиться на схемі, у статистиці й сповіщеннях автоматично.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" class="alt">
+  <div class="wrap">
+    <div class="center">
+      <div class="kicker">Питання</div>
+      <h2>Часті питання</h2>
+    </div>
+    <div class="faq">
+      <details><summary>Це безкоштовно?</summary><p>Так. DeyeWatch безкоштовний і з відкритим кодом (ліцензія MIT). Без реєстрації, реклами й підписок.</p></details>
+      <details><summary>Чи потрібен інтернет?</summary><p>Ні. Дані беруться напряму з WiFi-стіка у вашій домашній мережі. Інтернет потрібен лише для Telegram і Deye Cloud, якщо ви їх увімкнете. Telegram-повідомлення, надіслані без інтернету, стоять у черзі й приходять пізніше з правильним часом.</p></details>
+      <details><summary>Чому мені не прийшло сповіщення, коли зникло світло?</summary><p>Роутер, модем провайдера й комп'ютер мають живитися від резервного виходу інвертора або ДБЖ — інакше разом зі світлом зникає мережа. Також перевірте, що програма запущена (іконка біля годинника) і ввімкнено автозапуск.</p></details>
+      <details><summary>А якщо комп'ютер вимкнений?</summary><p>Поки комп'ютер вимкнений, сповіщень не буде, але історію можна не втрачати: підключіть Deye Cloud, і програма догрузить пропущене. Для цілодобових сповіщень у Telegram є <a href="https://github.com/purikv/DeyeWatch/tree/main/router-bot">легкий бот для роутера</a>.</p></details>
+      <details><summary>Це безпечно? Куди йдуть мої дані?</summary><p>У програми немає власного сервера й телеметрії. Історія зберігається лише на вашому комп'ютері. Пароль Deye Cloud не зберігається — тільки його хеш SHA-256, як вимагає API Deye. Код відкритий — його можна перевірити.</p></details>
+      <details><summary>Windows попереджає про невідомого видавця</summary><p>Файл не має платного цифрового підпису. Натисніть «Докладніше» → «Виконати в будь-якому разі». Або зберіть програму самостійно з сирців.</p></details>
+      <details><summary>Мого інвертора немає в списку сумісних</summary><p>Спробуйте: якщо стік відповідає на порту 8899, а карта регістрів збігається з Deye hybrid, програма запрацює. Розкажіть про результат в <a href="https://github.com/purikv/DeyeWatch/issues">issue</a> — це допоможе іншим.</p></details>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="center">
+      <div class="kicker">Документація</div>
+      <h2>Детально про все</h2>
+      <p class="sub">Покрокові інструкції, довідник налаштувань і відповіді на питання.</p>
+    </div>
+    <div class="docs">
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/installation.md"><b>Встановлення</b><span>Windows, Linux, автозапуск, оновлення</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/user-guide.md"><b>Посібник</b><span>Усі екрани й сповіщення</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/settings.md"><b>Налаштування</b><span>Довідник параметрів</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/troubleshooting.md"><b>Питання й проблеми</b><span>Якщо щось не працює</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/deye-cloud.md"><b>Deye Cloud</b><span>Історія, поки ПК вимкнений</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/telegram.md"><b>Telegram</b><span>Бот і команди</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/how-it-works.md"><b>Як це працює</b><span>Протокол, регістри, приватність</span></a>
+      <a href="https://github.com/purikv/DeyeWatch/blob/main/docs/development.md"><b>Розробка</b><span>Код, збірка, внесок</span></a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div>© 2026 DeyeWatch · <a href="https://github.com/purikv/DeyeWatch/blob/main/LICENSE">MIT</a> · <a href="https://github.com/purikv/DeyeWatch">GitHub</a></div>
+    <div>Deye, Solarman, Sunsynk і Sol-Ark — торговельні марки відповідних власників. Проєкт із ними не пов'язаний.</div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var shots = [
+    ["overview.png", "Огляд: стан мережі, смуга 24 годин, схема потоків, батарея з прогнозом."],
+    ["outages.png", "Відключення: підсумок, години без світла по днях, теплова карта, журнал."],
+    ["grid.png", "Якість мережі: напруга з мінімумом і максимумом, межі норми, частота, події."],
+    ["energy.png", "Енергія: сонце, споживання, мережа й генератор по днях, самозабезпечення."],
+    ["battery.png", "Батарея: рівень заряду, прогноз роботи, температура, цикли, заряд і розряд."],
+    ["overview-dark.png", "Темна тема — вмикається разом із системною або вручну."],
+    ["settings.png", "Налаштування: пояснення до кожного поля, автопошук стіка, перевірка зв'язку."]
+  ];
+  var img = document.getElementById("g-img"), cap = document.getElementById("g-cap");
+  var tabs = document.querySelectorAll(".tabs button");
+  tabs.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var s = shots[+b.dataset.i];
+      img.src = "assets/screenshots/" + s[0]; img.alt = b.textContent; cap.textContent = s[1];
+      tabs.forEach(function (x) { x.setAttribute("aria-selected", x === b ? "true" : "false"); });
+    });
+  });
+  shots.forEach(function (s) { var i = new Image(); i.src = "assets/screenshots/" + s[0]; });
+  // підсвічуємо завантаження для системи відвідувача
+  var ua = navigator.userAgent, os = /Windows/i.test(ua) ? "win" : /Ubuntu|Debian|Mint/i.test(ua) ? "deb" : /Linux/i.test(ua) ? "linux" : null;
+  if (os) {
+    document.querySelectorAll(".dl .card").forEach(function (c) {
+      var t = c.querySelector(".tag");
+      if (c.dataset.os === os) { c.classList.add("rec"); if (!t) { t = document.createElement("span"); t.className = "tag"; c.querySelector(".os").appendChild(t); } t.textContent = "для вашої системи"; }
+      else if (t) t.remove();
+    });
+  }
+})();
+</script>
+</body>
+</html>

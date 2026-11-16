@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Збірка
+desktop/build/
+desktop/dist/
+desktop/dist_new/
+desktop/build_deb/
+desktop/*.spec
+release/
+
+# Особисті дані — ніколи не комітити
+settings.json
+history.sqlite3
+config.json
+state.json
+*.lock
+DeyeWatch-налаштування-*.json
+*налаштування*.json
+fake_voltage.txt
+.env
+
+# Системне
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

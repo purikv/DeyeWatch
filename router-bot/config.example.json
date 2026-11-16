@@ -1,0 +1,20 @@
+{
+  "name": "Дім",
+  "telegram_token": "ВСТАВТЕ_ТОКЕН_ВІД_BOTFATHER",
+  "chat_ids": [111111111, 222222222],
+
+  "logger_ip": "192.168.50.100",
+  "logger_serial": 2712345678,
+  "logger_port": 8899,
+  "modbus_slave_id": 1,
+
+  "poll_interval_sec": 10,
+  "grid_min_voltage": 170,
+  "confirm_polls": 2,
+  "offline_alert_polls": 6,
+  "low_soc_thresholds": [50, 30, 15],
+
+  "timezone": "EET-2EEST,M3.5.0/3,M10.5.0/4",
+  "state_file": "state.json",
+  "history_keep": 500
+}
