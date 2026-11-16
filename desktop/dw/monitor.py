@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Фоновий моніторинг: опитування інвертора, визначення подій, статистика, Telegram."""
 import datetime as dt
+import logging
 import random
 import threading
 import time
@@ -10,6 +11,8 @@ from PySide6.QtCore import QObject, Signal
 
 from . import messages as M
 from .core import SolarmanV5, Telegram, discover
+
+log = logging.getLogger("deyewatch")
 
 
 class Monitor(QObject):
@@ -102,6 +105,7 @@ class Monitor(QObject):
             self.store.put("cloud_last_msg", str(e))
             self.cloud.emit(False, str(e))
         except Exception as e:
+            log.warning("Deye Cloud: %s", e)
             self.store.put("cloud_last_msg", str(e))
             self.cloud.emit(False, "немає зв'язку з хмарою: %s" % e)
         finally:
@@ -124,18 +128,27 @@ class Monitor(QObject):
                 self.fresh = True
                 self.request_sync("пробудження")
             prev = now
-            inv = SolarmanV5(c["logger_ip"], c["logger_serial"], c["logger_port"])
+            d = None
             try:
                 if not self._configured():
                     raise OSError("стік ще не налаштовано")
+                inv = SolarmanV5(c["logger_ip"], c["logger_serial"], c["logger_port"])
                 try:
                     d = inv.read_all()
                 except OSError:
                     time.sleep(1 + random.random())   # стік міг бути зайнятий іншим клієнтом
                     d = inv.read_all()
-                self._on_data(d)
             except Exception as e:
-                self._on_fail(str(e) or e.__class__.__name__)
+                try:
+                    self._on_fail(str(e) or e.__class__.__name__)
+                except Exception:
+                    log.exception("обробка збою зв'язку")
+            if d is not None:
+                # помилка в обробці (база, сповіщення) — не привід казати «немає зв'язку з інвертором»
+                try:
+                    self._on_data(d)
+                except Exception:
+                    log.exception("обробка даних інвертора")
             self.first_poll.set()
             prev = time.time()
             self.wake.wait(max(3, c["poll_interval_sec"]))
@@ -234,7 +247,10 @@ class Monitor(QObject):
         d["autonomy_h"] = self.autonomy_hours(d)
         d["gen_on"], d["gen_since"] = self.gen_on, self.gen_since
         if c["stats_enabled"]:
-            self._record(d)
+            try:
+                self._record(d)
+            except Exception:       # напр., диск заповнений — сповіщення мають працювати й далі
+                log.exception("запис історії")
         self.data.emit(d)
         self.status.emit("ok" if self.grid_ok else "outage",
                          ("Світло є" if self.grid_ok else "Світла немає") + " · " + M.fmt_dur(now - self.since)
@@ -363,7 +379,7 @@ class Monitor(QObject):
                         self.store.put("summary_day", key)
                         self.dispatch(self.summary_note())
             except Exception:
-                pass
+                log.exception("щоденні задачі")
             time.sleep(300)
 
     def summary_note(self):
@@ -405,7 +421,8 @@ class Monitor(QObject):
                     self.store.outbox_del(item[0])
                 else:
                     time.sleep(20)
-            except Exception:
+            except Exception as e:
+                log.warning("Telegram: %s", e)
                 time.sleep(20)   # немає інтернету — повторимо пізніше
 
     def _updates_loop(self):

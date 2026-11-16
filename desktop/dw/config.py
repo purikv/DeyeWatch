@@ -2,6 +2,8 @@
 import json
 import os
 import sys
+import threading
+import time
 
 APP_NAME = "DeyeWatch"
 
@@ -76,26 +78,66 @@ def config_dir():
         base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
         d = os.path.join(base, APP_NAME.lower())
     os.makedirs(d, exist_ok=True)
+    private(d, 0o700)
     return d
 
 
+def private(path, mode=0o600):
+    """Linux/macOS: налаштування містять токени — доступ лише власнику. На Windows профіль і так особистий."""
+    if os.name == "posix":
+        try:
+            os.chmod(path, mode)
+        except OSError:
+            pass
+
+
+def is_deye_cloud(url):
+    """Ключі й пароль Deye Cloud можна надсилати лише на сервери Deye і лише через HTTPS."""
+    from urllib.parse import urlparse
+    try:
+        u = urlparse(str(url).strip())
+    except ValueError:
+        return False
+    host = (u.hostname or "").lower()
+    return u.scheme == "https" and (host == "deyecloud.com" or host.endswith(".deyecloud.com"))
+
+
 class Config(dict):
+    _lock = threading.Lock()
+
     def __init__(self):
         super().__init__(DEFAULTS)
         self.path = os.path.join(config_dir(), "settings.json")
         try:
             with open(self.path, encoding="utf-8") as f:
-                self.update(json.load(f))
+                data = json.load(f)
+            if not isinstance(data, dict):
+                raise ValueError("не словник")
+            self.update(data)
         except FileNotFoundError:
             self.save()
         except Exception:
-            pass
+            # пошкоджений файл не перезаписуємо мовчки — зберігаємо копію, щоб налаштування можна було відновити
+            try:
+                os.replace(self.path, self.path + ".broken-%d" % int(time.time()))
+            except OSError:
+                pass
+            self.save()
+        if not is_deye_cloud(self.get("cloud_base")):
+            self["cloud_base"] = DEFAULTS["cloud_base"]
+        private(self.path)
 
     def save(self):
-        tmp = self.path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(dict(self), f, ensure_ascii=False, indent=2)
-        os.replace(tmp, self.path)
+        # зберігають і вікно, і фонові потоки (нова IP стіка, генератор) — тому під замком і з fsync:
+        # навіть при раптовому вимкненні живлення лишиться або старий, або новий файл, але не порожній
+        with self._lock:
+            tmp = "%s.%d.tmp" % (self.path, threading.get_ident())
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(dict(self), f, ensure_ascii=False, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            private(tmp)
+            os.replace(tmp, self.path)
 
     def chat_ids(self):
         return [c.strip() for c in str(self["telegram_chat_ids"]).replace(";", ",").split(",") if c.strip()]

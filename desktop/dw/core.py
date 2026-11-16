@@ -81,6 +81,8 @@ class SolarmanV5:
             if not chunk:
                 raise SolarmanError("стік закрив з'єднання")
             buf += chunk
+            if len(buf) > 8192:          # сміття замість кадру — не накопичуємо безкінечно
+                raise SolarmanError("некоректна відповідь стіка")
             s = buf.find(b"\xA5")
             if s >= 0 and len(buf) - s >= 3:
                 need = 11 + struct.unpack("<H", buf[s + 1:s + 3])[0] + 2
@@ -104,7 +106,9 @@ class SolarmanV5:
             if modbus_crc(mb[:-2]) != struct.unpack("<H", mb[-2:])[0]:
                 raise SolarmanError("помилка CRC")
             n = mb[2]
-            return struct.unpack(">%dH" % (n // 2), mb[3:3 + n])
+            if n != count * 2 or len(mb) < 3 + n + 2:
+                raise SolarmanError("неповна відповідь Modbus (%d з %d байт)" % (n, count * 2))
+            return struct.unpack(">%dH" % count, mb[3:3 + n])
         raise SolarmanError("немає відповіді")
 
     def read_all(self) -> dict:
@@ -123,6 +127,12 @@ class SolarmanV5:
             out[k] = round(v, 2) if scale != 1 else int(v)
         out["pv_power"] = out["pv1_power"] + out["pv2_power"]
         out["ts"] = time.time()
+        # Після перезавантаження стік інколи віддає кадр із самих нулів. Напруга мережі 0 у такому кадрі
+        # означала б хибне «світло зникло», тож нефізичні дані відкидаємо як помилку зв'язку.
+        # Ознака такого кадру — температура інвертора −100 °C (регістр зі зсувом 1000 містить 0).
+        if out["dc_temp"] <= -50 or not 0 <= out["batt_soc"] <= 100 or out["grid_voltage"] > 400:
+            raise SolarmanError("некоректні дані від інвертора (температура %.0f °C, заряд %s %%)"
+                                % (out["dc_temp"], out["batt_soc"]))
         return out
 
 
@@ -182,7 +192,9 @@ def discover(timeout=3.0):
         except OSError:
             break
         parts = data.decode("ascii", "ignore").strip().split(",")
-        if len(parts) >= 3 and parts[2].isdigit():
+        # відповідь має прийти саме з тієї адреси, яку вона називає, — інакше будь-хто в мережі
+        # міг би підсунути свою IP замість стіка
+        if len(parts) >= 3 and parts[2].isdigit() and parts[0] == addr[0]:
             mac = ":".join(parts[1][i:i + 2] for i in range(0, len(parts[1]), 2))
             found[parts[0]] = {"ip": parts[0], "mac": mac, "serial": int(parts[2])}
     sock.close()

@@ -75,7 +75,8 @@ case "$1" in
     if ! "$APP/venv/bin/python" -m pip install --quiet --disable-pip-version-check --no-index \\
             --find-links "$APP/wheels" PySide6-Essentials; then
         echo "DeyeWatch: вбудовані колеса PySide6 не підходять до цієї системи — пробую з інтернету" >&2
-        "$APP/venv/bin/python" -m pip install --quiet --disable-pip-version-check "PySide6-Essentials>=6.5"
+        "$APP/venv/bin/python" -m pip install --quiet --disable-pip-version-check --only-binary=:all: \\
+            "PySide6-Essentials>=6.9,<6.13"
     fi
     command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q /usr/share/applications || true
     command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -q -t /usr/share/icons/hicolor || true

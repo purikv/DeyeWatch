@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 """Головне вікно, трей, запуск."""
+import html
+import logging
+import logging.handlers
 import os
 import sys
+import threading
 import time
 
 from PySide6.QtCore import QLockFile, Qt, QTimer
@@ -97,6 +101,7 @@ class MainWindow(QMainWindow):
         self.conn.setObjectName("faint")
         self.conn.setWordWrap(True)
         self.sync = QLabel("")
+        self.sync.setTextFormat(Qt.PlainText)
         self.sync.setObjectName("faint")
         self.sync.setWordWrap(True)
         sv.addSpacing(8)
@@ -249,7 +254,7 @@ class App:
             lbl.setText("⟳ Оновлюю дані з хмари…\nграфіки уточняться за хвилину")
         elif getattr(self, "_cloud_err", None):
             lbl.setText("⚠ Хмара недоступна, повторю згодом")
-            lbl.setToolTip(self._cloud_err)
+            lbl.setToolTip(html.escape(self._cloud_err))
         else:
             try:
                 t = float(self.store.get("cloud_last", 0))
@@ -340,5 +345,25 @@ class App:
         return self.qapp.exec()
 
 
+def setup_logging():
+    """Журнал помилок deyewatch.log у теці налаштувань (до 3 × 1 МБ) — для діагностики збоїв."""
+    try:
+        h = logging.handlers.RotatingFileHandler(os.path.join(config_dir(), "deyewatch.log"),
+                                                 maxBytes=1_000_000, backupCount=2, encoding="utf-8")
+        h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        root = logging.getLogger("deyewatch")
+        root.setLevel(logging.INFO)
+        root.addHandler(h)
+    except OSError:
+        pass
+    log = logging.getLogger("deyewatch")
+    sys.excepthook = lambda t, v, tb: log.error("необроблена помилка", exc_info=(t, v, tb))
+    threading.excepthook = lambda a: log.error("помилка в потоці %s", a.thread and a.thread.name,
+                                               exc_info=(a.exc_type, a.exc_value, a.exc_traceback))
+
+
 def main():
+    setup_logging()
+    from . import __version__
+    logging.getLogger("deyewatch").info("запуск DeyeWatch %s", __version__)
     sys.exit(App(sys.argv).run())

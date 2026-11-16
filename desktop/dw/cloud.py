@@ -70,7 +70,10 @@ def parse_ts(v):
 class DeyeCloud:
     def __init__(self, cfg, store):
         self.cfg, self.store = cfg, store
+        from .config import is_deye_cloud
         self.base = (cfg["cloud_base"] or "https://eu1-developer.deyecloud.com").rstrip("/")
+        if not is_deye_cloud(self.base):
+            raise CloudError("сервер API має бути https://…deyecloud.com")
 
     # ---- HTTP
     def _http(self, path, body, auth=True, query=""):
@@ -81,7 +84,9 @@ class DeyeCloud:
         req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=40) as r:
-                res = json.loads(r.read().decode("utf-8"))
+                res = json.loads(r.read(20_000_000).decode("utf-8"))
+            if not isinstance(res, dict):
+                raise CloudError("неочікувана відповідь сервера")
         except urllib.error.HTTPError as e:
             if e.code == 401 and auth:
                 self.store.put("cloud_token", "")

@@ -81,6 +81,7 @@ class SettingsPage(Page):
         b2 = QPushButton("Перевірити зв'язок")
         b2.clicked.connect(self.do_test)
         self.conn_lbl = QLabel("")
+        self.conn_lbl.setTextFormat(Qt.PlainText)
         self.conn_lbl.setObjectName("muted")
         self.conn_lbl.setWordWrap(True)
         row.addWidget(b1)
@@ -190,6 +191,7 @@ class SettingsPage(Page):
         b = QPushButton("Надіслати тестове")
         b.clicked.connect(self.do_tg_test)
         self.tg_lbl = QLabel("")
+        self.tg_lbl.setTextFormat(Qt.PlainText)
         self.tg_lbl.setObjectName("muted")
         self.tg_lbl.setWordWrap(True)
         row.addWidget(b)
@@ -229,6 +231,7 @@ class SettingsPage(Page):
         b = QPushButton("Зберегти й синхронізувати")
         b.clicked.connect(self.do_cloud)
         self.cloud_lbl = QLabel(self._cloud_status())
+        self.cloud_lbl.setTextFormat(Qt.PlainText)
         self.cloud_lbl.setObjectName("muted")
         self.cloud_lbl.setWordWrap(True)
         row.addWidget(b)
@@ -285,6 +288,7 @@ class SettingsPage(Page):
         b.clicked.connect(self.do_import)
         row.addWidget(b)
         self.tr_lbl = QLabel("")
+        self.tr_lbl.setTextFormat(Qt.PlainText)
         self.tr_lbl.setObjectName("muted")
         self.tr_lbl.setWordWrap(True)
         row.addWidget(self.tr_lbl, 1)
@@ -572,6 +576,8 @@ class SettingsPage(Page):
         try:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(doc, f, ensure_ascii=False, indent=2)
+            from .config import private
+            private(path)     # у файлі можуть бути токени — лише власнику (Linux)
             self.tr_lbl.setText("✓ Збережено: %s%s" % (path, "" if with_secrets else
                                 " (без паролів — на новому пристрої їх треба ввести)"))
         except OSError as e:
@@ -599,6 +605,10 @@ class SettingsPage(Page):
             return
         data = {k: v for k, v in data.items() if k in DEFAULTS and type(v) is type(DEFAULTS[k])
                 or (k in DEFAULTS and isinstance(DEFAULTS[k], float) and isinstance(v, int))}
+        from .config import is_deye_cloud
+        if "cloud_base" in data and not is_deye_cloud(data["cloud_base"]):
+            # інакше чужий файл міг би відправити ваші ключі Deye Cloud на сторонній сервер
+            data.pop("cloud_base")
         if not data:
             self.tr_lbl.setText("✗ У файлі немає налаштувань DeyeWatch")
             return

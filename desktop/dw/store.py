@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS kv(k TEXT PRIMARY KEY, v TEXT);
 
 class Store:
     def __init__(self, path):
-        self.db = sqlite3.connect(path, check_same_thread=False)
+        self.db = sqlite3.connect(path, check_same_thread=False, timeout=30)
+        from .config import private
+        private(path)
         self.db.executescript(SCHEMA)
         try:   # колонка генератора з'явилася пізніше — додаємо в стару базу
             self.db.execute("ALTER TABLE samples ADD COLUMN gen_p INTEGER")

@@ -105,6 +105,11 @@
 |---|---|---|
 | Налаштування | `%APPDATA%\DeyeWatch\settings.json` | `~/.config/deyewatch/settings.json` |
 | Історія | `%APPDATA%\DeyeWatch\history.sqlite3` | `~/.config/deyewatch/history.sqlite3` |
+| Журнал помилок | `%APPDATA%\DeyeWatch\deyewatch.log` | `~/.config/deyewatch/deyewatch.log` |
+
+Якщо щось працює не так, подивіться в журнал помилок або додайте його до
+[issue](https://github.com/purikv/DeyeWatch/issues) — перед цим переконайтеся, що в ньому немає
+ваших особистих даних.
 
 Щоб почати з нуля, закрийте програму й видаліть ці файли (налаштування можна спершу
 [зберегти у файл](settings.md#перенесення-на-інший-компютер)).
