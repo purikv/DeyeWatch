@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Блискавка DeyeWatch на кольоровому тлі (адаптивна іконка 108×108, безпечна зона 66×66) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M58.6,30 L39,57.4 L51.4,57.4 L48.2,78 L69,49.6 L56.6,49.6 Z" />
+</vector>

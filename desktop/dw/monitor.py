@@ -93,8 +93,14 @@ class Monitor(QObject):
             rep = sync(DeyeCloud(self.cfg, self.store), self.cfg, self.store)
             self.sync_pending = rep.get("pending", False)
             o = self.store.open_outage()
-            if o:
-                self.since = o[1]
+            live_ok = self.last is not None and self.last["grid_voltage"] >= self.cfg["grid_min_voltage"]
+            if o and live_ok:
+                # хмара бачила відключення до своєї останньої точки, а інвертор уже показує світло
+                self.store.end_outage(time.time())
+            elif o:
+                # за даними хмари відключення триває — стан і його початок беремо звідти
+                self.grid_ok, self.since = False, o[1]
+                self.pending_ts = None
             elif self.grid_ok:
                 self.since = max(self.store.last_outage_end() or 0, min(self.since, time.time())) or self.since
             self.store.put("cloud_last", time.time())
@@ -213,12 +219,21 @@ class Monitor(QObject):
         if self.fresh and self.grid_ok is not None and ok != self.grid_ok:
             # стан змінився, поки програма була закрита: точного часу не знаємо —
             # світло повернулося → закриваємо відключення останнім відомим моментом (хмара уточнить)
+            last = self.store.q("SELECT max(ts) FROM samples")[0][0] or now
             if ok:
-                last = self.store.q("SELECT max(ts) FROM samples")[0][0] or now
                 self.store.end_outage(max(last, self.since))
                 self.grid_ok, self.since = True, now
                 self.store.put("since", now)
                 self.pending_ts = None
+            else:
+                # світло зникло, поки програма не працювала: відключення почалося не раніше
+                # останніх відомих даних — від них і рахуємо (хмара уточнить), а не від моменту запуску
+                start = min(now, max(last + 60, self.since))
+                self.store.start_outage(start)
+                self.grid_ok, self.since = False, start
+                self.store.put("since", start)
+                self.pending_ts = None
+                self.soc_warned = set()
         self.fresh = False
         if self.grid_ok is None:
             self.grid_ok = ok

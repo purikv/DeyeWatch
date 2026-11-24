@@ -119,7 +119,11 @@ class Store:
             if keep_open:
                 self.x("UPDATE outages SET start=? WHERE id=?", (min(start, keep_open[1]), keep_open[0]))
             else:
-                found.append([start, None if open_now else last + 60])
+                # дані закінчуються відключенням: якщо вони свіжі (хмара відстає на 5–15 хв), відключення,
+                # найімовірніше, триває — не закриваємо його, інакше між останньою точкою й «зараз» з'явилося б
+                # хибне «світло було»
+                ongoing = open_now or time.time() - last < 1800
+                found.append([start, None if ongoing else last + 60])
         merged = []
         for s, e in found:
             if merged and merged[-1][1] is not None and s - merged[-1][1] < min_dur:
