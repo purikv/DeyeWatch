@@ -108,7 +108,12 @@ class Store:
         for ts, ok in rows:
             near = prev is not None and ts - prev <= 120
             if not ok and start is None:
-                start = ts if (prev is None or near) else (prev + ts) / 2
+                if prev is None and r:
+                    # вікно почалося всередині відомого відключення — зберігаємо його точний початок
+                    # (точки «світло ще було» перед ним у вікно не потрапила)
+                    start = min(r, ts)
+                else:
+                    start = ts if (prev is None or near) else (prev + ts) / 2
             elif ok and start is not None:
                 found.append([start, ts if near else (prev + ts) / 2])
                 start = None

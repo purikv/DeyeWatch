@@ -237,7 +237,11 @@ def sync(cloud, cfg, store, log=print):
         outs = store.rebuild_outages(0)
         store.put("outages_rebuilt_v2", 1)
     elif added:
-        outs = store.rebuild_outages(min(g0 for g0, _ in gaps) - 600)
+        outs = store.rebuild_outages(min(min(g0 for g0, _ in gaps) - 600, now - 6 * 3600))
+    else:
+        # нових точок немає, але останні години все одно перебудовуємо: це виправляє сліди
+        # попередніх збоїв (напр. хибний проміжок «світло було» після запуску) і коштує мілісекунди
+        outs = store.rebuild_outages(now - 6 * 3600)
     store.put("cloud_checked", now - 15 * 60)
     # енергія по днях
     days = 0
